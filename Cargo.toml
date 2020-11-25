@@ -6,6 +6,7 @@ edition = "2018"
 description = "A package for typing numbers in a compile-time known range"
 license = "MIT"
 repository = "https://github.com/sheyne/ranged-num/"
+readme = "README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

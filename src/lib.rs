@@ -1,24 +1,88 @@
 #![no_std]
 
+//! ranged-num is a crate for representing a single number that is
+//! in some compile-time known range of values. You can use any underlying
+//! numeric type to hold the actual value. The main type to look at is
+//! [Ranged](struct.Ranged.html). 
+//! 
+//! Example:
+//! 
+//! ```
+//! use typenum::{N2, P3, P4};
+//! use ranged_num::Ranged;
+//!
+//! let ranged = Ranged::<N2, P4, isize>::new::<P3>();
+//! assert_eq!(ranged.value(), 3);
+//! ```
+
 use core::marker::PhantomData;
 #[macro_use]
 extern crate typenum;
 use core::ops::{Add, Mul, Rem, Sub};
 use typenum::{op, Integer, IsLessOrEqual, Max, Min, NInt, NonZero, PInt, UInt, Unsigned, U0, U1};
 
+/// These are used by a macro. In order for them to be accessible to the macro
+/// I re-exported them. If you know of a better way to do this, let me know.  
 pub mod reexports {
     pub use typenum::{type_operators::IsLessOrEqual, Unsigned, U0, U1};
 }
 
+/// Holds a single value between `Min` and `Max`. That value is stored in a single
+/// variable of type `Underlying`.
+/// 
+/// Example:
+/// ```
+/// use typenum::{N5, P5};
+/// use ranged_num::Ranged;
+///
+/// let ranged = Ranged::<N5, P5, i8>::try_new(-1).unwrap();
+/// assert_eq!(ranged.value(), -1);
 #[derive(Debug)]
 pub struct Ranged<Min, Max, Underlying>(Underlying, PhantomData<Min>, PhantomData<Max>);
 
+/// Represent a usize in `[0, Max]` (inclusive).
+/// 
+/// Example:
+/// ```
+/// use typenum::U5;
+/// use ranged_num::UZeroTo;
+/// 
+/// let x: UZeroTo<U5> = UZeroTo::try_new(4).unwrap();
+/// ```
 pub type UZeroTo<Max> = Ranged<U0, Max, usize>;
 
+/// `typenum` doesn't currently allow you to easily specify any numbers
+/// (signed or unsigned) that can be converted to a given type. I've added
+/// `CanMake<V>` as a trait to indicate which types can easily make a runtime
+/// value of type `V` to use in type bounds. 
 pub trait CanMake<V> {
+    /// Create the `V` that goes with this type. 
+    /// 
+    /// Example:
+    /// 
+    /// ```
+    /// use typenum::P5;
+    /// use ranged_num::CanMake;
+    /// 
+    /// let x: i8 = <P5 as CanMake<i8>>::make();
+    /// assert_eq!(x, 5);
+    /// ```
     fn make() -> V;
 }
 
+/// `typenum` doesn't currently allow you to easily add an `Integer` with an `Unsigned`.
+/// The `AddU` trait lets you add some `Unsigned` to both `Integer`s and `Unsigned`s.
+/// 
+/// Example:
+/// 
+/// ```
+/// use typenum::*;
+/// use ranged_num::AddU;
+/// 
+/// assert_type_eq!(<U6 as AddU<U3>>::Output, U9);
+/// assert_type_eq!(<P6 as AddU<U3>>::Output, P9);
+/// assert_type_eq!(<N6 as AddU<U3>>::Output, N3);
+/// ```
 pub trait AddU<U>
 where
     U: Unsigned,
@@ -59,7 +123,7 @@ macro_rules! define_can_make {
             T: $thing,
         {
             fn make() -> $type {
-                T::$assoc
+                T::$assoc.into()
             }
         }
     };
@@ -70,6 +134,8 @@ define_can_make!(Integer => i8 : I8);
 define_can_make!(Integer => i16 : I16);
 define_can_make!(Integer => i32 : I32);
 define_can_make!(Integer => i64 : I64);
+define_can_make!(Integer => f32 : I16);
+define_can_make!(Integer => f64 : I32);
 
 define_can_make!(Unsigned => usize : USIZE);
 define_can_make!(Unsigned => u8 : U8);
@@ -82,7 +148,7 @@ impl<Min, Max, Underlying> Ranged<Min, Max, Underlying> {
     ///
     /// ```
     /// use typenum::{N2, P3, P4};
-    /// use ranged::Ranged;
+    /// use ranged_num::Ranged;
     ///
     /// let ranged = Ranged::<N2, P4, isize>::new::<P3>();
     /// assert_eq!(ranged.value(), 3);
@@ -101,7 +167,7 @@ impl<Min, Max, Underlying> Ranged<Min, Max, Underlying> {
     /// Example:
     /// ```
     /// use typenum::{U2, U4};
-    /// use ranged::Ranged;
+    /// use ranged_num::Ranged;
     ///
     /// let ranged = Ranged::<U2, U4, usize>::try_new(3).unwrap();
     /// assert_eq!(ranged.value(), 3);
@@ -130,7 +196,7 @@ impl<Min, Max, Underlying> Ranged<Min, Max, Underlying> {
     /// Example:
     /// ```
     /// use typenum::{N2, P2, P4};
-    /// use ranged::Ranged;
+    /// use ranged_num::Ranged;
     ///
     /// let x = Ranged::<N2, P4, isize>::new::<P2>();
     /// let y: Ranged<N2, P4, isize> = x.wrapped_add(4);
@@ -161,7 +227,7 @@ impl<Min, Max, Underlying> Ranged<Min, Max, Underlying> {
     /// Example:
     /// ```
     /// use typenum::*;
-    /// use ranged::Ranged;
+    /// use ranged_num::Ranged;
     ///
     /// let x = Ranged::<N2, P4, isize>::new::<P2>();
     /// assert_eq!(x.value(), 2);
@@ -179,11 +245,57 @@ impl<Min, Max, Underlying> Ranged<Min, Max, Underlying> {
         Ranged(self.value() + T::make(), PhantomData, PhantomData)
     }
 
+    /// Retrieve the value of this Ranged. It will be between Min and Max (inclusive).
+    ///
+    /// Example:
+    /// ```
+    /// use typenum::{N2, P3, P4};
+    /// use ranged_num::Ranged;
+    ///
+    /// let ranged = Ranged::<N2, P4, isize>::new::<P3>();
+    /// assert_eq!(ranged.value(), 3);
+    /// ```
     pub fn value(&self) -> Underlying
     where
         Underlying: Copy,
     {
         self.0
+    }
+
+    /// Calculate the maximum value that this Ranged could hold. That is
+    /// get the runtime value of Max.
+    ///
+    /// Example:
+    /// ```
+    /// use typenum::{N2, P3, P4};
+    /// use ranged_num::Ranged;
+    ///
+    /// let ranged = Ranged::<N2, P4, isize>::new::<P3>();
+    /// assert_eq!(ranged.max_value(), 4);
+    /// ```
+    pub fn max_value(&self) -> Underlying
+    where
+        Max: CanMake<Underlying>,
+    {
+        Max::make()
+    }
+
+    /// Calculate the minimum value that this Ranged could hold. That is
+    /// get the runtime value of Min.
+    ///
+    /// Example:
+    /// ```
+    /// use typenum::{N2, P3, P4};
+    /// use ranged_num::Ranged;
+    ///
+    /// let ranged = Ranged::<N2, P4, isize>::new::<P3>();
+    /// assert_eq!(ranged.min_value(), -2);
+    /// ```
+    pub fn min_value(&self) -> Underlying
+    where
+        Min: CanMake<Underlying>,
+    {
+        Min::make()
     }
 }
 
@@ -262,7 +374,7 @@ where
 ///
 /// Example:
 /// ```
-/// use ranged::{define_ranged_enum, UZeroTo};
+/// use ranged_num::{define_ranged_enum, UZeroTo};
 ///
 /// define_ranged_enum!(Example, Derive(Debug, PartialEq, Eq), A, B, C);
 ///
@@ -436,5 +548,19 @@ mod tests {
         assert_type_eq!(<P2 as AddU<U3>>::Output, P5);
         assert_type_eq!(<N2 as AddU<U3>>::Output, P1);
         assert_type_eq!(<U2 as AddU<U3>>::Output, U5);
+    }
+
+    #[test]
+    fn test_bounded_float() {
+        let x = Ranged::<N3, P5, f64>::try_new(4.5).unwrap();
+        let y = Ranged::<P1, P2, f64>::try_new(1.6).unwrap();
+
+        let sum = x + y;
+
+        assert_eq!(sum.max_value(), 7f64);
+        assert_eq!(sum.min_value(), -2f64);
+        assert!((sum.value() - (4.5 + 1.6)).abs() < 0.001);
+
+        assert!(Ranged::<N3, P5, f64>::try_new(-4.5).is_none());
     }
 }
