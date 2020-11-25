@@ -1,0 +1,13 @@
+[package]
+name = "ranged-num"
+version = "0.1.0"
+authors = ["Sheyne Anderson <sheyne@sheyne.com>"]
+edition = "2018"
+description = "A package for typing numbers in a compile-time known range"
+license = "MIT"
+repository = "https://github.com/sheyne/ranged-num/"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+typenum = "1.12.0"
