@@ -1,7 +1,7 @@
 ranged-num is a crate for representing a single number that is
 in some compile-time known range of values. You can use any underlying
 numeric type to hold the actual value. The main type to look at is
-[Ranged](https://docs.rs/ranged-num/0.1.0/ranged_num/struct.Ranged.html). 
+[Ranged](https://docs.rs/ranged-num/latest/ranged_num/struct.Ranged.html). 
 
 Example:
 
