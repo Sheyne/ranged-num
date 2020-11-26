@@ -161,7 +161,7 @@ impl<Min, Max, Underlying> Ranged<Min, Max, Underlying> {
         Ranged(T::make(), PhantomData, PhantomData)
     }
 
-    /// Create a new `Randed` from `Min` to `Max` (inclusive) from the given value.
+    /// Create a new `Ranged` from `Min` to `Max` (inclusive) from the given value.
     /// Returns Some(Ranged) if the given value is between `Min` and `Max`.
     ///
     /// Example:
